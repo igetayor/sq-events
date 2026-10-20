@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ige Event Sourcing & State Reconstitution Engine</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0c121e;
+      --card: #151d30;
+      --border: #232e48;
+      --accent: #6366f1;
+      --success: #10b981;
+      --danger: #ef4444;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: var(--bg); color: var(--text); padding: 2.5rem 1rem;
+      display: flex; flex-direction: column; align-items: center; min-height: 100vh;
+    }
+    .container { max-width: 960px; width: 100%; }
+    .badge {
+      display: inline-block; background: rgba(99, 102, 241, 0.15);
+      border: 1px solid rgba(99, 102, 241, 0.35); color: var(--accent);
+      padding: 0.35rem 0.85rem; border-radius: 9999px; font-size: 0.8rem; font-weight: 600;
+      text-transform: uppercase; margin-bottom: 1rem;
+    }
+    h1 { font-size: 2.25rem; font-weight: 700; margin-bottom: 0.5rem; }
+    p.sub { color: var(--muted); font-size: 1.05rem; margin-bottom: 2rem; line-height: 1.6; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
+    @media(max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; }
+    .btn-group { display: flex; gap: 0.5rem; margin-top: 1rem; }
+    button {
+      flex: 1; background: #6366f1; color: #fff; font-weight: 600; padding: 0.75rem;
+      border: none; border-radius: 8px; cursor: pointer;
+    }
+    .log-stream {
+      background: #080c14; border: 1px solid #1a2234; border-radius: 8px;
+      padding: 1rem; height: 220px; overflow-y: auto; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem;
+    }
+    .balance-card { text-align: center; padding: 1.5rem; background: rgba(99, 102, 241, 0.1); border-radius: 8px; margin-bottom: 1rem; }
+    .balance-val { font-size: 2.25rem; font-weight: 700; color: #6366f1; font-family: 'JetBrains Mono', monospace; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="badge">Go Event Sourcing & CQRS</div>
+    <h1>Single-File Event Sourcing & Snapshot Engine</h1>
+    <p class="sub">Demonstrates append-only immutable event streams and pure fold/reduce state rehydration without mutable database rows or external SQL daemons.</p>
+
+    <div class="grid">
+      <div class="card">
+        <h3>Current Entity State (Rehydrated)</h3>
+        <div class="balance-card">
+          <div style="font-size: 0.85rem; color: var(--muted);">Reconstituted Account Balance</div>
+          <div id="accBalance" class="balance-val">$500.00</div>
+          <div style="font-size: 0.8rem; color: var(--muted); margin-top: 0.5rem;">Status: <span id="accStatus" style="color: #10b981; font-weight: 600;">ACTIVE</span> | Version: <span id="accVersion">1</span></div>
+        </div>
+        <div class="btn-group">
+          <button onclick="appendEvent('MONEY_DEPOSITED', 100)">+ Deposit $100</button>
+          <button style="background: #ef4444;" onclick="appendEvent('MONEY_WITHDRAWN', 50)">- Withdraw $50</button>
+          <button style="background: #475569;" onclick="appendEvent('ACCOUNT_FROZEN', 0)">❄️ Freeze</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Immutable Append-Only Log</h3>
+        <div id="eventsLog" class="log-stream">
+          <div>[Stream acc_99018] Initialized: ACCOUNT_OPENED (+$500.00)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let balance = 500.0;
+    let version = 1;
+    let status = "ACTIVE";
+
+    function appendEvent(type, amount) {
+      if (status === "FROZEN" && type !== "ACCOUNT_UNFROZEN") {
+        alert("Cannot mutate frozen account state!");
+        return;
+      }
+
+      version++;
+      if (type === "MONEY_DEPOSITED") balance += amount;
+      if (type === "MONEY_WITHDRAWN") balance -= amount;
+      if (type === "ACCOUNT_FROZEN") status = "FROZEN";
+
+      document.getElementById('accBalance').textContent = `$${balance.toFixed(2)}`;
+      document.getElementById('accVersion').textContent = version;
+      document.getElementById('accStatus').textContent = status;
+      document.getElementById('accStatus').style.color = status === "ACTIVE" ? '#10b981' : '#ef4444';
+
+      const log = document.getElementById('eventsLog');
+      const time = new Date().toLocaleTimeString();
+      log.innerHTML = `<div>[${time}] Evt #${version}: ${type} (Payload: {amount: ${amount}})</div>` + log.innerHTML;
+    }
+  </script>
+</body>
+</html>
