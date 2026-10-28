@@ -3,105 +3,98 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ige Event Sourcing & State Reconstitution Engine</title>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --bg: #0c121e;
-      --card: #151d30;
-      --border: #232e48;
-      --accent: #6366f1;
-      --success: #10b981;
-      --danger: #ef4444;
-      --text: #f8fafc;
-      --muted: #94a3b8;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      background: var(--bg); color: var(--text); padding: 2.5rem 1rem;
-      display: flex; flex-direction: column; align-items: center; min-height: 100vh;
-    }
-    .container { max-width: 960px; width: 100%; }
-    .badge {
-      display: inline-block; background: rgba(99, 102, 241, 0.15);
-      border: 1px solid rgba(99, 102, 241, 0.35); color: var(--accent);
-      padding: 0.35rem 0.85rem; border-radius: 9999px; font-size: 0.8rem; font-weight: 600;
-      text-transform: uppercase; margin-bottom: 1rem;
-    }
-    h1 { font-size: 2.25rem; font-weight: 700; margin-bottom: 0.5rem; }
-    p.sub { color: var(--muted); font-size: 1.05rem; margin-bottom: 2rem; line-height: 1.6; }
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
-    @media(max-width: 768px) { .grid { grid-template-columns: 1fr; } }
-    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; }
-    .btn-group { display: flex; gap: 0.5rem; margin-top: 1rem; }
-    button {
-      flex: 1; background: #6366f1; color: #fff; font-weight: 600; padding: 0.75rem;
-      border: none; border-radius: 8px; cursor: pointer;
-    }
-    .log-stream {
-      background: #080c14; border: 1px solid #1a2234; border-radius: 8px;
-      padding: 1rem; height: 220px; overflow-y: auto; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem;
-    }
-    .balance-card { text-align: center; padding: 1.5rem; background: rgba(99, 102, 241, 0.1); border-radius: 8px; margin-bottom: 1rem; }
-    .balance-val { font-size: 2.25rem; font-weight: 700; color: #6366f1; font-family: 'JetBrains Mono', monospace; }
-  </style>
+  <title>Ige Event Sourcing — Append-Only Ledger & Rehydration</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="static/css/styles.css">
 </head>
 <body>
-  <div class="container">
-    <div class="badge">Go Event Sourcing & CQRS</div>
-    <h1>Single-File Event Sourcing & Snapshot Engine</h1>
-    <p class="sub">Demonstrates append-only immutable event streams and pure fold/reduce state rehydration without mutable database rows or external SQL daemons.</p>
-
-    <div class="grid">
-      <div class="card">
-        <h3>Current Entity State (Rehydrated)</h3>
-        <div class="balance-card">
-          <div style="font-size: 0.85rem; color: var(--muted);">Reconstituted Account Balance</div>
-          <div id="accBalance" class="balance-val">$500.00</div>
-          <div style="font-size: 0.8rem; color: var(--muted); margin-top: 0.5rem;">Status: <span id="accStatus" style="color: #10b981; font-weight: 600;">ACTIVE</span> | Version: <span id="accVersion">1</span></div>
+  <div class="dashboard-container">
+    <!-- Header -->
+    <header class="dashboard-header">
+      <div class="header-brand">
+        <div class="badge-tag">
+          Append-Only Event Ledger
         </div>
-        <div class="btn-group">
-          <button onclick="appendEvent('MONEY_DEPOSITED', 100)">+ Deposit $100</button>
-          <button style="background: #ef4444;" onclick="appendEvent('MONEY_WITHDRAWN', 50)">- Withdraw $50</button>
-          <button style="background: #475569;" onclick="appendEvent('ACCOUNT_FROZEN', 0)">❄️ Freeze</button>
-        </div>
+        <h1 class="dashboard-title">Event Sourcing & Rehydration</h1>
+        <p class="dashboard-sub">
+          Enterprise immutable ledger architecture where application state is never mutated in place. Aggregate state is deterministically folded from raw domain events with optimistic concurrency protection.
+        </p>
       </div>
 
-      <div class="card">
-        <h3>Immutable Append-Only Log</h3>
-        <div id="eventsLog" class="log-stream">
-          <div>[Stream acc_99018] Initialized: ACCOUNT_OPENED (+$500.00)</div>
-        </div>
+      <div class="header-status-pill">
+        <span style="color: var(--text-dim);">PORT:</span>
+        <span style="color: #38bdf8; font-weight: 700;">8094</span>
+        <span style="margin: 0 0.25rem; color: var(--border-subtle);">|</span>
+        <span style="color: #10b981; font-weight: 600;">ACTIVE</span>
       </div>
+    </header>
+
+    <!-- Error Banner -->
+    <div id="errorBanner" style="display: none; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171; padding: 0.85rem 1.25rem; border-radius: 8px; font-family: var(--font-mono); font-size: 0.85rem;">
     </div>
+
+    <!-- Rehydrated State Hero Card -->
+    <section id="accountHeroContainer" class="account-hero-card">
+      <!-- Populated dynamically by AccountCard.js -->
+    </section>
+
+    <!-- Ledger & Commands Grid -->
+    <main class="ledger-grid">
+      <!-- Left Column: Command Dispatcher -->
+      <section class="panel-card">
+        <div class="panel-header">
+          <h3>Domain Command Dispatcher</h3>
+          <span style="font-size: 0.8rem; font-family: var(--font-mono); color: var(--text-dim);">Appends Immutable Event</span>
+        </div>
+
+        <div id="commandForm" class="command-form">
+          <div class="form-group">
+            <label for="txnAmount">Transaction Amount ($)</label>
+            <input type="number" id="txnAmount" class="form-control" value="2500" min="1" step="50">
+          </div>
+
+          <div class="form-group">
+            <label for="txnReason">Audit Memo / Description</label>
+            <input type="text" id="txnReason" class="form-control" value="Treasury Yield Transfer">
+          </div>
+
+          <div class="button-grid" style="margin-top: 0.5rem;">
+            <button id="btnDeposit" class="btn btn-deposit">
+              + Deposit Funds
+            </button>
+            <button id="btnWithdraw" class="btn btn-withdraw">
+              - Withdraw Funds
+            </button>
+            <button id="btnFreeze" class="btn btn-freeze">
+              🔒 Freeze Account
+            </button>
+            <button id="btnUnfreeze" class="btn btn-unfreeze">
+              🔓 Unfreeze Account
+            </button>
+          </div>
+        </div>
+
+        <div style="font-size: 0.8rem; color: var(--text-dim); line-height: 1.5; border-top: 1px solid var(--border-subtle); padding-top: 0.75rem;">
+          💡 <strong>Audit Invariance:</strong> Rather than updating a balance column in an SQL table, every deposit or withdrawal writes an unchangeable event record. The state is pure derivative math!
+        </div>
+      </section>
+
+      <!-- Right Column: Event Stream -->
+      <section class="panel-card">
+        <div class="panel-header">
+          <h3>Immutable Event Stream Ledger</h3>
+          <span style="font-size: 0.75rem; color: var(--text-dim); font-family: var(--font-mono);">Sequence Fold</span>
+        </div>
+
+        <div id="timelineStream" class="timeline-stream">
+          <!-- Populated by EventTimeline.js -->
+        </div>
+      </section>
+    </main>
   </div>
 
-  <script>
-    let balance = 500.0;
-    let version = 1;
-    let status = "ACTIVE";
-
-    function appendEvent(type, amount) {
-      if (status === "FROZEN" && type !== "ACCOUNT_UNFROZEN") {
-        alert("Cannot mutate frozen account state!");
-        return;
-      }
-
-      version++;
-      if (type === "MONEY_DEPOSITED") balance += amount;
-      if (type === "MONEY_WITHDRAWN") balance -= amount;
-      if (type === "ACCOUNT_FROZEN") status = "FROZEN";
-
-      document.getElementById('accBalance').textContent = `$${balance.toFixed(2)}`;
-      document.getElementById('accVersion').textContent = version;
-      document.getElementById('accStatus').textContent = status;
-      document.getElementById('accStatus').style.color = status === "ACTIVE" ? '#10b981' : '#ef4444';
-
-      const log = document.getElementById('eventsLog');
-      const time = new Date().toLocaleTimeString();
-      log.innerHTML = `<div>[${time}] Evt #${version}: ${type} (Payload: {amount: ${amount}})</div>` + log.innerHTML;
-    }
-  </script>
+  <script type="module" src="static/js/app.js"></script>
 </body>
 </html>

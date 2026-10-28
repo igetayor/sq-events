@@ -1,60 +1,87 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
+
+	eventstore "ige-sqlite-event-sourcing/eventstore"
 )
 
+func runDemo() {
+	fmt.Println("============================================================")
+	fmt.Println("[*] Ige Event Sourcing & Ledger Rehydration Engine")
+	fmt.Println("============================================================")
+
+	tempDb := filepath.Join(os.TempDir(), "ige_demo_events.log")
+	defer os.Remove(tempDb)
+
+	store := eventstore.NewFileEventStore(tempDb)
+	streamID := "acc_fintech_999"
+
+	fmt.Println("\n[1] Appending Immutable Domain Events to Append-Only Ledger:")
+
+	_, _ = store.Append(streamID, "ACCOUNT_OPENED", map[string]interface{}{
+		"account_id":      streamID,
+		"owner":           "Omotayo Capital Partners",
+		"initial_balance": 50000.00,
+	}, 0)
+	fmt.Println("   + [Event 1] ACCOUNT_OPENED (Initial Balance: $50,000.00)")
+
+	_, _ = store.Append(streamID, "MONEY_DEPOSITED", map[string]interface{}{
+		"amount": 15000.00,
+		"reason": "Dividend Inflow",
+	}, 1)
+	fmt.Println("   + [Event 2] MONEY_DEPOSITED (+$15,000.00)")
+
+	_, _ = store.Append(streamID, "MONEY_WITHDRAWN", map[string]interface{}{
+		"amount": 8500.00,
+		"reason": "Vendor Payout",
+	}, 2)
+	fmt.Println("   + [Event 3] MONEY_WITHDRAWN (-$8,500.00)")
+
+	_, _ = store.Append(streamID, "ACCOUNT_FROZEN", map[string]interface{}{
+		"reason": "Routine AML Audit Flag",
+	}, 3)
+	fmt.Println("   + [Event 4] ACCOUNT_FROZEN (Compliance Lock)")
+
+	fmt.Println("\n[2] Loading Stream & Rehydrating Aggregate State from Zero:")
+	events, err := store.LoadStream(streamID)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
+
+	state, err := eventstore.RehydrateAccount(events)
+	if err != nil {
+		fmt.Printf("Rehydration error: %v\n", err)
+		return
+	}
+
+	fmt.Printf("   - Account ID:      %s\n", state.AccountID)
+	fmt.Printf("   - Owner:           %s\n", state.Owner)
+	fmt.Printf("   - Current Balance: $%.2f\n", state.Balance)
+	fmt.Printf("   - Account Status:  %s\n", state.Status)
+	fmt.Printf("   - Current Version: v%d (Folded %d events)\n", state.Version, len(events))
+
+	fmt.Println("\n[3] Full Audit Trail Projection:")
+	for _, entry := range state.AuditLog {
+		fmt.Printf("   %s\n", entry)
+	}
+
+	fmt.Println("\n[+] Event sourcing pattern demonstrated: zero destructive updates, full time-travel capability.")
+	fmt.Println("    To launch the interactive visualizer, run: go run . -serve")
+}
+
 func main() {
-	fmt.Println("============================================================")
-	fmt.Println("⚡ Ige Single-File Event Sourcing & State Reconstitution Engine")
-	fmt.Println("============================================================")
+	serve := flag.Bool("serve", false, "Start interactive web server on port 8094")
+	port := flag.String("port", "8094", "Port for web server")
+	flag.Parse()
 
-	dbFile := "events.db"
-	_ = os.Remove(dbFile) // Fresh run
-	store := NewFileEventStore(dbFile)
-
-	accountID := "acc_99018"
-
-	fmt.Println("\n[1] Appending immutable domain events...")
-
-	// Event 1: Opened
-	_, _ = store.Append(accountID, "ACCOUNT_OPENED", map[string]interface{}{
-		"account_id":      accountID,
-		"owner":           "Adeyinka Ige",
-		"initial_balance": 500.0,
-	})
-	fmt.Println(" - Appended Event: ACCOUNT_OPENED (Initial: $500.00)")
-
-	// Event 2: Deposited
-	_, _ = store.Append(accountID, "MONEY_DEPOSITED", map[string]interface{}{
-		"amount": 250.0,
-	})
-	fmt.Println(" - Appended Event: MONEY_DEPOSITED (+$250.00)")
-
-	// Event 3: Withdrawn
-	_, _ = store.Append(accountID, "MONEY_WITHDRAWN", map[string]interface{}{
-		"amount": 100.0,
-	})
-	fmt.Println(" - Appended Event: MONEY_WITHDRAWN (-$100.00)")
-
-	fmt.Println("\n[2] Reconstituting Account State from raw event log...")
-	events, err := store.LoadStream(accountID)
-	if err != nil {
-		panic(err)
+	if *serve {
+		startServer(*port)
+	} else {
+		runDemo()
 	}
-
-	state, err := RehydrateAccount(events)
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Printf("\n✨ Reconstituted State:\n")
-	fmt.Printf("   Account ID:      %s\n", state.AccountID)
-	fmt.Printf("   Account Holder:  %s\n", state.Owner)
-	fmt.Printf("   Final Balance:   $%.2f\n", state.Balance)
-	fmt.Printf("   Account Status:  %s\n", state.Status)
-	fmt.Printf("   Version Applied: %d events\n", state.Version)
-
-	fmt.Println("\nZero external database servers required. Run instantly with 'go run main.go'!")
 }
