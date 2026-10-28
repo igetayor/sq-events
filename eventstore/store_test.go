@@ -16,21 +16,21 @@ func TestEventStoreAndRehydration(t *testing.T) {
 		"account_id":      streamID,
 		"owner":           "Test User",
 		"initial_balance": 100.0,
-	})
+	}, 0)
 	if err != nil {
 		t.Fatalf("Failed to append open event: %v", err)
 	}
 
 	_, err = store.Append(streamID, "MONEY_DEPOSITED", map[string]interface{}{
 		"amount": 50.0,
-	})
+	}, 1)
 	if err != nil {
 		t.Fatalf("Failed to append deposit event: %v", err)
 	}
 
 	_, err = store.Append(streamID, "MONEY_WITHDRAWN", map[string]interface{}{
 		"amount": 30.0,
-	})
+	}, 2)
 	if err != nil {
 		t.Fatalf("Failed to append withdraw event: %v", err)
 	}
