@@ -1,3 +1,5 @@
+// Package eventstore implements the append-only, thread-safe SQLite/file-based
+// event store and the aggregate rehydration (fold) logic for the ledger domain.
 package eventstore
 
 import (
@@ -110,8 +112,7 @@ func (s *FileEventStore) loadStreamUnsafe(streamID string) ([]Event, error) {
 	}
 
 	var events []Event
-	lines := splitLines(data)
-	for _, l := range lines {
+	for _, l := range splitLines(data) {
 		if len(l) == 0 {
 			continue
 		}
@@ -125,7 +126,7 @@ func (s *FileEventStore) loadStreamUnsafe(streamID string) ([]Event, error) {
 	return events, nil
 }
 
-// Clear removes or truncates the event file.
+// Clear truncates the event ledger file.
 func (s *FileEventStore) Clear() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
